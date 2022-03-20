@@ -1,0 +1,6 @@
+# Type: List of String
+Groups: !Split [",", ["a,b,c"]]
+Groups:
+  - a
+  - b
+  - c
