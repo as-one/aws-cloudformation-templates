@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-iam-user
+      Tags:
+        - Key: one
+          Value: !Join [ "-", [ !Ref AWS::Region, one ] ] # us-east-1-one
+        - Key: two
+          Value:  # us-east-1-two
+            Fn::Join:
+              - "-"
+              - - !Ref AWS::Region
+                - two

@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-iam-user
+      Tags:
+        - Key: one
+          Value: !Base64 one # b25l
+        - Key: two
+          Value: !Base64
+            "Fn::Sub": two # dGhyZWU=

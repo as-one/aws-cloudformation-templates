@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-iam-user
+      Tags:
+        - Key: one
+          Value: !GetAtt MyIAMGroup.Arn # arn:aws:iam::969294931748:group/my-cf-1-MyIAMGroup-Z49TP3LDI8Y1 
+        - Key: two
+          Value: !Join [ "-", [ !GetAtt MyIAMGroup.Arn, one ] ] # arn:aws:iam::969294931748:group/my-cf-1-MyIAMGroup-Z49TP3LDI8Y1-one
+  
+  MyIAMGroup:
+    Type: AWS::IAM::Group
