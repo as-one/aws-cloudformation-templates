@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: MyIAMGroup
+      Path: /

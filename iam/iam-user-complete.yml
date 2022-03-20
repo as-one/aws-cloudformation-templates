@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - MyIAMGroupName
+      LoginProfile:
+        Password: eYVW73KN-fL&%$4
+        PasswordResetRequired: true
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: MyIAMPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: s3:GetObject
+              Resource: "*"
+      Tags:
+        - Key: Name
+          Value: MyIAMUser
+      UserName: my-iam-user
+  
+  MyIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: MyIAMGroupName

@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Groups:
+        - !Ref MyIAMGroup
+      PolicyName: MyIAMPolicy
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+  MyIAMGroup:
+    Type: AWS::IAM::Group

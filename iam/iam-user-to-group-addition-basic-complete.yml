@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUserToGroupAddition:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties: 
+      GroupName: !Ref MyIAMGroup
+      Users:
+        - !Ref MyIAMUser
+
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-iam-user
+  
+  MyIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: MyIAMGroup

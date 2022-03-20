@@ -1,0 +1,7 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: my-iam-user
