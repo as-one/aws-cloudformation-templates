@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+# CloudFront
+  CFD01:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - 'HEAD'
+            - 'GET'
+          Compress: false
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: !Sub 's3-origin-${S301}'
+          ViewerProtocolPolicy: redirect-to-https
+        HttpVersion: http2
+        Origins:
+          - DomainName: !GetAtt S301.DomainName
+            Id: !Sub 's3-origin-${S301}'
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CFOAI01}'
+      Tags:
+        - Key: "customKey"
+          Value: "customValue"
+  CFOAI01:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'Access S3 bucket content only through CloudFront'
+# S3
+  S301:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Event: s3:ObjectCreated:*
+            Topic: !Ref SNS01
+          - Event: s3:ObjectRemoved:*
+            Topic: !Ref SNS01
+# SNS
+  SNS01:
+    Type: AWS::SNS::Topic
+    Properties:
+      Tags:
+        - Key: custom
+          Value: asone
+  SNS01Subscription01:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNS01
+      Endpoint: !GetAtt SQS01DLQ01.Arn
+      Protocol: sqs
+      RawMessageDelivery: true
+  SNS01Subscription02:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNS01
+      Endpoint: cesar.kohl@voxiechat.com
+      Protocol: email
+  SNS01TopicPolicyToS301:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SNS01
+      Topics:
+        - !Ref SNS01
+# SQS
+  SQS01:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SQS01DLQ01.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: custom
+          Value: asone
+        - Key: arn
+          Value: !Ref SNS01
+  SQS01DLQ01:
+    Type: AWS::SQS::Queue
+  SQS01Policy01:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: SQS:*
+            Resource: !GetAtt SQS01.Arn
+      Queues:
+        - !Ref SQS01
+# Lambda
+  Lambda01:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs14.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event, context) => {
+              return JSON.stringify(event);
+          };
+      Role: !GetAtt Lambda01Role01.Arn
+  Lambda01Role01:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: AWSLambdaBasicExecutionRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+  Lambda01SQS01Consumer01:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FunctionName: !GetAtt Lambda01.Arn
+      EventSourceArn: !GetAtt SQS01.Arn

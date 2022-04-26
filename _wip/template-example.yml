@@ -1,0 +1,346 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: The AWS CloudFormation template for this Serverless application
+Resources:
+  ServerlessDeploymentBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 70bb3ff1-82a9-4503-a550-b972e2f790b3
+  ServerlessDeploymentBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref ServerlessDeploymentBucket
+      PolicyDocument:
+        Statement:
+          - Action: 's3:*'
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+                  - /*
+              - !Join
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8e5fdb69-d3e0-4733-b766-2710b5a40ccc
+  NuxtLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/analytics-frontend-dev-nuxt
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7d7e10b0-5a13-4ae3-a18b-1d7678057618
+  IamRoleLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join
+            - '-'
+            - - analytics-frontend
+              - dev
+              - lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/analytics-frontend-dev*:*
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/analytics-frontend-dev*:*:*
+      Path: /
+      RoleName: !Join
+        - '-'
+        - - analytics-frontend
+          - dev
+          - !Ref 'AWS::Region'
+          - lambdaRole
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 5871616f-8d9b-4db7-ab7d-61c645ffb379
+  NuxtLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: >-
+          serverless/analytics-frontend/dev/1625077222399-2021-06-30T18:20:22.399Z/analytics-frontend.zip
+      Handler: handler.nuxt
+      Runtime: nodejs14.x
+      FunctionName: analytics-frontend-dev-nuxt
+      MemorySize: 1024
+      Timeout: 6
+      Environment:
+        Variables:
+          NODE_ENV: prod
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+    DependsOn:
+      - NuxtLogGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: ac5d90e0-04dc-4eba-8af2-e2e52dca3987
+  NuxtLambdaVersionjofYwS9K7jnEkwdmL0s9YT4yLau3PnW80VoYRWLOtgs:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref NuxtLambdaFunction
+      CodeSha256: 0CLBuqNiZmgUBs1SFIdH7ujMYyUkgGyslTSRdUAR/G0=
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 29050e23-03da-4205-99b4-80ac77a986cb
+  ApiGatewayRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: analytics-frontend-dev
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Policy: ''
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e3d46f7a-c06e-4f51-9370-a1b6da845abc
+  ApiGatewayResourceProxyVar:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: '{proxy+}'
+      RestApiId: !Ref ApiGatewayRestApi
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 1275c447-05f3-402a-82a2-86d6042392df
+  ApiGatewayMethodAny:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: ANY
+      RequestParameters: {}
+      ResourceId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - NuxtLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+    DependsOn:
+      - NuxtLambdaPermissionApiGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e54f51f4-2140-46bc-a008-0b12d257820f
+  ApiGatewayMethodProxyVarAny:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: ANY
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceProxyVar
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - NuxtLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+    DependsOn:
+      - NuxtLambdaPermissionApiGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: f4877f9b-5857-4a75-9b7e-14972805ae01
+  ApiGatewayDeployment1625077136094:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: dev
+    DependsOn:
+      - ApiGatewayMethodAny
+      - ApiGatewayMethodProxyVarAny
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b6ac2383-270c-4590-b398-194736f7a1c8
+  NuxtLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - NuxtLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 35e7cf81-1179-4f68-b8f5-861bcea77855
+  ApiGatewayLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/api-gateway/analytics-frontend-dev
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 53889d32-2b82-4214-80be-df17429e2aa2
+  CustomApiGatewayAccountCloudWatchRole:
+    Type: 'Custom::ApiGatewayAccountRole'
+    Version: 1
+    Properties:
+      ServiceToken: !GetAtt
+        - CustomDashresourceDashapigwDashcwDashroleLambdaFunction
+        - Arn
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 80e29208-e740-4c8f-876c-2adba9badcc5
+  IamRoleCustomResourcesLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join
+            - '-'
+            - - dev
+              - analytics-frontend
+              - custom-resources-lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: !Join
+                  - ':'
+                  - - arn
+                    - !Ref 'AWS::Partition'
+                    - 'iam:'
+                    - !Ref 'AWS::AccountId'
+                    - role/*
+                Action:
+                  - 'iam:AttachRolePolicy'
+                  - 'iam:CreateRole'
+                  - 'iam:ListAttachedRolePolicies'
+                  - 'iam:PassRole'
+              - Effect: Allow
+                Resource: !Join
+                  - ':'
+                  - - arn
+                    - !Ref 'AWS::Partition'
+                    - 'apigateway:*::/account'
+                Action:
+                  - 'apigateway:GET'
+                  - 'apigateway:PATCH'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8cf76f30-7c2f-4692-9090-57212790d645
+  CustomDashresourceDashapigwDashcwDashroleLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: >-
+          serverless/analytics-frontend/dev/1625077222399-2021-06-30T18:20:22.399Z/custom-resources.zip
+      FunctionName: analytics-frontend-dev-custom-resource-apigw-cw-role
+      Handler: apiGatewayCloudWatchRole/handler.handler
+      MemorySize: 1024
+      Runtime: nodejs12.x
+      Timeout: 180
+      Role: !GetAtt
+        - IamRoleCustomResourcesLambdaExecution
+        - Arn
+    DependsOn:
+      - IamRoleCustomResourcesLambdaExecution
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 010d3728-31b0-4881-bb3b-1d4c8ef415dd
+Outputs:
+  ServerlessDeploymentBucketName:
+    Value: !Ref ServerlessDeploymentBucket
+    Export:
+      Name: sls-analytics-frontend-dev-ServerlessDeploymentBucketName
+  NuxtLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref NuxtLambdaVersionjofYwS9K7jnEkwdmL0s9YT4yLau3PnW80VoYRWLOtgs
+    Export:
+      Name: sls-analytics-frontend-dev-NuxtLambdaFunctionQualifiedArn
+  ServiceEndpoint:
+    Description: URL of the service endpoint
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !Ref ApiGatewayRestApi
+        - .execute-api.
+        - !Ref 'AWS::Region'
+        - .
+        - !Ref 'AWS::URLSuffix'
+        - /dev
+    Export:
+      Name: sls-analytics-frontend-dev-ServiceEndpoint
