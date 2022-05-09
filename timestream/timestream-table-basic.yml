@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyTimestreamTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref MyTimestreamDatabase
+  
+  MyTimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: my-timestream-database

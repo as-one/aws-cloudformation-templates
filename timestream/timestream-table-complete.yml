@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyTimestreamTable:
+    Type: AWS::Timestream::Table
+    Properties:
+      DatabaseName: !Ref MyTimestreamDatabase
+      MagneticStoreWriteProperties:
+        EnableMagneticStoreWrites: true
+        MagneticStoreRejectedDataLocation:
+          S3Configuration:
+            BucketName: !Ref MyS3Bucket
+            EncryptionOption: SSE_S3
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: 24
+        MagneticStoreRetentionPeriodInDays: 7
+      TableName: my-timestream-table
+      Tags:
+        - Key: key
+          Value: value  
+  
+  MyTimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: my-timestream-database
+
+  MyS3Bucket:
+    Type: AWS::S3::Bucket

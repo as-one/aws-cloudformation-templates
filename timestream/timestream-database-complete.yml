@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MyTimestreamDatabase:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: my-timestream-database
+      # KmsKeyId: 
+      Tags:
+        - Key: key
+          Value: value
